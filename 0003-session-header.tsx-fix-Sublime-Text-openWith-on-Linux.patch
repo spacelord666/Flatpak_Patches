@@ -1,0 +1,23 @@
+From: a11en <a11en@localhost>
+Date: Thu, 25 Jun 2026 00:00:00 +0000
+Subject: [PATCH 3/3] fix(app): use correct binary name for Sublime Text on
+ Linux
+
+The Linux entry for Sublime Text used `"Sublime Text"` as the `openWith`
+value, which is a display name — not an executable. The correct binary
+name is `"subl"`. This caused `execFile` to fail with ENOENT whenever a
+user selected "Sublime Text" from the "Open with" menu.
+
+diff --git a/packages/app/src/components/session/session-header.tsx b/packages/app/src/components/session/session-header.tsx
+index 4a2e8c1..b9f3d6a 100644
+--- a/packages/app/src/components/session/session-header.tsx
++++ b/packages/app/src/components/session/session-header.tsx
+@@ -76,7 +76,7 @@ const LINUX_APPS = [
+   {
+     id: "sublime-text",
+     label: "session.header.open.app.sublimeText",
+     icon: "sublime-text",
+-    openWith: "Sublime Text",
++    openWith: "subl",
+   },
+ ] as const

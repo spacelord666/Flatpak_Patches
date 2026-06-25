@@ -1,0 +1,35 @@
+From: a11en <a11en@localhost>
+Date: Thu, 25 Jun 2026 00:00:00 +0000
+Subject: [PATCH 2/3] fix(desktop): handle flatpak run commands in open-path
+ IPC handler
+
+When `resolveAppPath` returns a `flatpak run <app-id>` string, the
+`open-path` handler must invoke `flatpak run --file-forwarding <app-id>
+<path>` instead of passing the flatpak command string directly to
+`execFile`.
+
+diff --git a/packages/desktop/src/main/ipc.ts b/packages/desktop/src/main/ipc.ts
+index 3f7b1a9..c8e4b5f 100644
+--- a/packages/desktop/src/main/ipc.ts
++++ b/packages/desktop/src/main/ipc.ts
+@@ -192,7 +192,17 @@ export function registerIpcHandlers(deps: Deps) {
+   ipcMain.handle("open-path", async (_event: IpcMainInvokeEvent, path: string, app?: string) => {
+     if (!app) return shell.openPath(path)
+     await new Promise<void>((resolve, reject) => {
+-      const [cmd, args] =
+-        process.platform === "darwin" ? (["open", ["-a", app, path]] as const) : ([app, [path]] as const)
+-      execFile(cmd, args, (err) => (err ? reject(err) : resolve()))
++      if (process.platform === "darwin") {
++        execFile("open", ["-a", app, path], (err) => (err ? reject(err) : resolve()))
++      } else if (process.platform === "linux" && app.startsWith("flatpak run ")) {
++        const flatpakId = app.slice("flatpak run ".length).trim()
++        execFile(
++          "flatpak",
++          ["run", "--file-forwarding", flatpakId, path],
++          (err) => (err ? reject(err) : resolve()),
++        )
++      } else {
++        execFile(app, [path], (err) => (err ? reject(err) : resolve()))
++      }
+     })
+   })
